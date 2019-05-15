@@ -16,11 +16,9 @@
 [[artifact-resolution-queries]]
 == Artifact resolution queries
 
-[[artifact-transforms]]
-== Artifact transforms
+include::artifact-transforms.adoc[]
 
-[[variant-aware-plugins]]
-== Variant-aware plugins
+include::variant-aware-plugins.adoc[]
 
 [[adding-new-attributes]]
 === Adding new attributes

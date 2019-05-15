@@ -1,19 +1,5 @@
-// Copyright 2018 the original author or authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-[[declaring_repositories]]
-= Declaring Repositories
+[[sec:declaring-repositories]]
+= Declaring repositories
 
 Gradle can resolve dependencies from one or many repositories based on Maven, Ivy or flat directory formats. Check out the <<repository_types.adoc#repository_types,full reference on all types of repositories>> for more information.
 
@@ -70,49 +56,48 @@ include::sample[dir="/userguide/dependencyManagement/declaringRepositories/multi
 The order of declaration determines how Gradle will check for dependencies at runtime. If Gradle finds a module descriptor in a particular repository, it will attempt to download all of the artifacts for that module from _the same repository_. You can learn more about the inner workings of <<introduction_dependency_management.adoc#sec:dependency_resolution,Gradle's resolution mechanism>>.
 ====
 
-[[sec::matching_repositories_to_dependencies]]
-== Matching repositories to dependencies
+[[supported-repo-types]]
+== Supported repository types
 
-[NOTE]
-====
+TODO
 
-Matching repositories to dependencies is an <<feature_lifecycle.adoc#feature_lifecycle,incubating>> feature.
+[[how-gradle-downloads-deps]]
+== How Gradle downloads dependencies
 
-====
+Gradle takes your dependency declarations and repository definitions and attempts to download all of your dependencies by a process called _dependency resolution_. Below is a brief outline of how this process works.
 
-Gradle exposes an API to declare what a repository may or may not contain.
-There are different use cases for it:
+* Given a required dependency, Gradle attempts to resolve the dependency by searching for the module the dependency points at. Each repository is inspected in order. Depending on the type of repository, Gradle looks for metadata files describing the module (`.module`, `.pom` or `ivy.xml` file) or directly for artifact files.
 
-- performance, when you know a dependency will never be found in a specific repository
-- security, by avoiding leaking what dependencies are used in a private project
-- reliability, when some repositories contain corrupted metadata or artifacts
+** If the dependency is declared as a dynamic version (like `1.+`, `[1.0,)`, `[1.0, 2.0)`), Gradle will resolve this to the highest available concrete version (like `1.2`) in the repository. For Maven repositories, this is done using the `maven-metadata.xml` file, while for Ivy repositories this is done by directory listing.
 
-It's even more important when considering that order of repositories matter.
+** If the module metadata is a POM file that has a parent POM declared, Gradle will recursively attempt to resolve each of the parent modules for the POM.
 
-=== Declaring a repository filter
+* Once each repository has been inspected for the module, Gradle will choose the 'best' one to use. This is done using the following criteria:
 
-.Declaring repository contents
-====
-include::sample[dir="/userguide/dependencyManagement/declaringRepositories/filtering/groovy",files="build.gradle[tags=repository-filter]"]
-include::sample[dir="/userguide/dependencyManagement/declaringRepositories/filtering/kotlin",files="build.gradle.kts[tags=repository-filter]"]
-====
+** For a dynamic version, a 'higher' concrete version is preferred over a 'lower' version.
 
-By default, repositories include everything and exclude nothing:
+** Modules declared by a module metadata file (`.module`, `.pom` or `ivy.xml` file) are preferred over modules that have an artifact file only.
 
-* If you declare an include, then it excludes everything _but_ what is included.
-* If you declare an exclude, then it includes everything _but_ what is excluded.
-* If you declare both includes and excludes, then it includes only what is explicitly included and not excluded.
+** Modules from earlier repositories are preferred over modules in later repositories.
 
-It is possible to filter either by explicit _group_, _module_ or _version_, either strictly or using regular expressions.
-See link:{javadocPath}/org/gradle/api/artifacts/repositories/RepositoryContentDescriptor.html[RepositoryContentDescriptor] for details.
+** When the dependency is declared by a concrete version and a module metadata file is found in a repository, there is no need to continue searching later repositories and the remainder of the process is short-circuited.
 
-=== Maven repository filtering
+* All of the artifacts for the module are then requested from the _same repository_ that was chosen in the process above.
 
-For Maven repositories, it's often the case that a repository would either contain releases or snapshots.
-Gradle lets you declare what kind of artifacts are found in a repository using this DSL:
+The dependency resolution process is highly customizable to meet enterprise requirements. For more information, see the chapter on <<customizing_dependency_resolution_behavior.adoc#customizing_dependency_resolution_behavior,customizing dependency resolution>>.
 
-.Splitting snapshots and releases
-====
-include::sample[dir="/userguide/dependencyManagement/declaringRepositories/filtering/groovy",files="build.gradle[tags=repository-snapshots]"]
-include::sample[dir="/userguide/dependencyManagement/declaringRepositories/filtering/kotlin",files="build.gradle.kts[tags=repository-snapshots]"]
-====
+[[sub:http-retries]]
+=== HTTP Retries
+
+Gradle will make several attempts to connect to a given repository. If it fails, Gradle will retry, increasing the amount of time waiting between each retry. After a max number of failed attempts, the repository will be blacklisted for the whole build.
+
+
+[[case-for-maven-local]]
+== The case for mavenLocal()
+
+TODO
+
+[[plugin-vs-build-repos]]
+== Plugin repositories vs. build repositories
+
+TODO
